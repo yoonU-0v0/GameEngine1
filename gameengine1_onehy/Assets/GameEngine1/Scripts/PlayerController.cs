@@ -2,78 +2,100 @@ using UnityEngine;
 
 public class PlayerController : MonoBehaviour
 {
+    [Header("이동 설정")]
     public float moveSpeed = 5.0f;
 
-    // Animator 컴포넌트 참조 (private - Inspector에 안 보임)
+    [Header("점프 설정")]
+    public float jumpForce = 10.0f;
+
+    private Rigidbody2D rb;
     private Animator animator;
+    private bool isGrounded = false;
+    private int score = 0;
+
+    private Vector3 startPosition;
 
     void Start()
     {
-        // 게임 시작 시 한 번만 - Animator 컴포넌트 찾아서 저장
+        rb = GetComponent<Rigidbody2D>();
         animator = GetComponent<Animator>();
 
-        // 디버그: 제대로 찾았는지 확인
-        if (animator != null)
-        {
-            Debug.Log("Animator 컴포넌트를 찾았습니다!");
-        }
-        else
-        {
-            Debug.LogError("Animator 컴포넌트가 없습니다!");
-        }
+        startPosition = transform.position;
+        Debug.Log("시작 위치 저장: " + startPosition);
     }
 
     void Update()
     {
-        // 이동 벡터 초기화
-        Vector3 movement = Vector3.zero;
+        float moveX = 0f;
+        if (Input.GetKey(KeyCode.A)) moveX = -1f;
+        if (Input.GetKey(KeyCode.D)) moveX = 1f;
 
-        // 좌우 입력 체크
-        if (Input.GetKey(KeyCode.A))
-        {
-            movement += Vector3.left;
-            transform.localScale = new Vector3(-1, 1, 1); // X축 뒤집기
-        }
-        if (Input.GetKey(KeyCode.D))
-        {
-            movement += Vector3.right;
-            transform.localScale = new Vector3(1, 1, 1); // 원래 크기
-        }
+        rb.velocity = new Vector2(moveX * moveSpeed, rb.velocity.y);
 
-        // 실제 이동 적용 (A,D 둘 다 포함)
-        if (movement != Vector3.zero)
+        if (moveX != 0)
+            transform.localScale = new Vector3(Mathf.Sign(moveX), 1, 1);
+
+        if (Input.GetKeyDown(KeyCode.Space) && isGrounded)
         {
-            transform.Translate(movement * moveSpeed * Time.deltaTime);
+            rb.velocity = new Vector2(rb.velocity.x, jumpForce);
+            isGrounded = false;
+            animator.SetBool("isJumping", true);
         }
 
-        // 속도 계산 및 Animator 전달
-        float currentSpeed = movement != Vector3.zero ? moveSpeed : 0f;
-        if (animator != null)
-        {
-            animator.SetFloat("Speed", currentSpeed);
-            Debug.Log("Current Speed: " + currentSpeed);
-        }
-
-        // 달리기 속도 계산
-        float currentMoveSpeed = moveSpeed;
-        if (Input.GetKey(KeyCode.LeftShift))
-        {
-            currentMoveSpeed = moveSpeed * 2f;
-            Debug.Log("달리기 모드 활성화!");
-        }
-
-        // 이동할 때 계산된 속도 사용
-        transform.Translate(movement * currentMoveSpeed * Time.deltaTime);
-        
-            // 점프 입력 (한 번만 실행되어야 하므로 GetKeyDown!)
-        if (Input.GetKeyDown(KeyCode.Space))
-        {
-            if (animator != null)
-            {
-                animator.SetBool("isJumping", true);
-                Debug.Log("점프!");
-            }
-    }
+        float currentSpeed = Mathf.Abs(rb.velocity.x);
+        animator.SetFloat("Speed", currentSpeed);
     }
 
+    void OnCollisionExit2D(Collision2D collision)
+    {
+        if (collision.gameObject.CompareTag("Ground"))
+        {
+            isGrounded = false;
+        }
+    }
+
+    void OnTriggerEnter2D(Collider2D other)
+    {
+        // 코인 수집
+        if (other.CompareTag("Coin"))
+        {
+            score += 1;
+            Debug.Log("💰 코인 획득! 현재 점수: " + score);
+            Destroy(other.gameObject);
+        }
+
+        // 별 수집
+        if (other.CompareTag("Star"))
+        {
+            score += 5;
+            Debug.Log("⭐ 별 획득! +5점! 현재 점수: " + score);
+            Destroy(other.gameObject);
+        }
+
+        // 골 도달 - 새로 추가!
+        if (other.CompareTag("Goal"))
+        {
+            Debug.Log("🎉🎉🎉 게임 클리어! 🎉🎉🎉");
+            Debug.Log("최종 점수: " + score + "점");
+
+            // 캐릭터 조작 비활성화
+            enabled = false;
+        }
+    }
+
+    void OnCollisionEnter2D(Collision2D collision)
+    {
+        if (collision.gameObject.CompareTag("Ground"))
+        {
+            isGrounded = true;
+            animator.SetBool("isJumping", false);
+        }
+
+        if (collision.gameObject.CompareTag("Obstacle"))
+        {
+            Debug.Log("⚠️ 장애물 충돌! 시작 지점으로 돌아갑니다.");
+            transform.position = startPosition;
+            rb.velocity = Vector2.zero;
+        }
+    }
 }
