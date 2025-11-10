@@ -30,19 +30,19 @@ public class PlayerController : MonoBehaviour
         if (Input.GetKey(KeyCode.A)) moveX = -1f;
         if (Input.GetKey(KeyCode.D)) moveX = 1f;
 
-        rb.velocity = new Vector2(moveX * moveSpeed, rb.velocity.y);
+        rb.linearVelocity = new Vector2(moveX * moveSpeed, rb.linearVelocity.y);
 
         if (moveX != 0)
             transform.localScale = new Vector3(Mathf.Sign(moveX), 1, 1);
 
         if (Input.GetKeyDown(KeyCode.Space) && isGrounded)
         {
-            rb.velocity = new Vector2(rb.velocity.x, jumpForce);
+            rb.linearVelocity = new Vector2(rb.linearVelocity.x, jumpForce);
             isGrounded = false;
             animator.SetBool("isJumping", true);
         }
 
-        float currentSpeed = Mathf.Abs(rb.velocity.x);
+        float currentSpeed = Mathf.Abs(rb.linearVelocity.x);
         animator.SetFloat("Speed", currentSpeed);
     }
 
@@ -95,7 +95,7 @@ public class PlayerController : MonoBehaviour
         {
             Debug.Log("⚠️ 장애물 충돌! 시작 지점으로 돌아갑니다.");
             transform.position = startPosition;
-            rb.velocity = Vector2.zero;
+            rb.linearVelocity = Vector2.zero;
         }
     }
 }
